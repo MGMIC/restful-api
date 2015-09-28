@@ -61,6 +61,7 @@ class UserProfile(LoginRequiredMixin,APIView):
         if password:
             user.set_password(password)
             data = {"password":"Successfully Updated"}
+	    user.save()
             return Response(data)
         auth_tok  = request.DATA.get('auth-token', None)
         if str(auth_tok).lower()=="update":
