@@ -23,7 +23,7 @@ TEMPLATE_CONTEXT_PROCESSORS = global_settings.TEMPLATE_CONTEXT_PROCESSORS + (
 )
 
 #DOCKER_HOST_DATA_DIRECTORY when host machine runs need to know if different then /data
-try
+try:
     DOCKER_HOST_DATA_DIRECTORY= config.DOCKER_HOST_DATA_DIRECTORY
 except:
     DOCKER_HOST_DATA_DIRECTORY="/data"
@@ -52,9 +52,10 @@ REST_FRAMEWORK = {
         'catalog.permission.DjangoMongoPermissionsOrAnonReadOnly'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.BasicAuthentication',
+        #'rest_framework.authentication.BasicAuthentication',
+	'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.TokenAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        #'rest_framework.authentication.SessionAuthentication',
     ),
     #Renderer defaults
     'DEFAULT_RENDERER_CLASSES': (

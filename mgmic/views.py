@@ -22,8 +22,13 @@ from subprocess import Popen, PIPE, call
 from django.conf import settings
 from urlparse import urlparse
 import requests
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.authentication import SessionAuthentication,TokenAuthentication
 
 class CheckMapFile(APIView):
+    parser_classes = (JSONParser,MultiPartParser, FormParser,)
+    authentication_classes = (SessionAuthentication, TokenAuthentication)
     permission_classes = ( AllowAny,)
     renderer_classes = (JSONRenderer,)
     def __init__(self, *args, **kwargs):
@@ -33,6 +38,10 @@ class CheckMapFile(APIView):
         self.docker_container = "qiime_env"
         super(CheckMapFile, self).__init__(*args, **kwargs)
 
+    @method_decorator(csrf_exempt)
+    def dispatch(self, request, *args, **kwargs):
+        return super(CheckMapFile, self).dispatch(request, *args, **kwargs)
+
     def get_username(self, request):
         username = "guest"
         if request.user.is_authenticated():
@@ -40,7 +49,8 @@ class CheckMapFile(APIView):
         return username
 
     def post(self, request,format=None):
-        filename =request.POST.get('filename',None)
+	filename = request.DATA.get('filename',None)
+        #filename =request.POST.get('filename',None)
         if filename:
             if os.path.isfile(filename):
                 p = Popen(['md5sum', filename], stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -52,6 +62,7 @@ class CheckMapFile(APIView):
                     raise Exception("Please Check URL or Local File Path(local files must be in /data directory) %s" % filename)
                 resultDir = os.path.join("/data/tmp", self.get_username(request))
                 map_read = os.path.join(resultDir,filename.split('/')[-1])
+		make_dirs(resultDir)
                 logfile= open(resultDir + "/logfile.txt","w")
                 call(['wget','-O',map_read,filename],stdout=logfile,stderr=logfile)
                 logfile.close()
@@ -59,11 +70,7 @@ class CheckMapFile(APIView):
                 output, err = p.communicate()
                 resultDir = os.path.join("/data/tmp", self.get_username(request),output.split()[0])
                 filename=map_read
-            try:
-                os.makedirs(resultDir)
-            except:
-                shutil.rmtree(resultDir)
-                os.makedirs(resultDir)
+	    make_dirs(resultDir)
         else:
             raise Exception('Please provide map file filename')
         docker_cmd = self.docker_cmd % (filename,resultDir)
@@ -81,6 +88,12 @@ class CheckMapFile(APIView):
             'log': data,
             'local-file': filename 
         })
+def make_dirs(path):
+    try:
+	os.makedirs(path)
+    except:
+	shutil.rmtree(path)
+	os.makedirs(path)
 
 def check_url_exist(url):
     p = urlparse(url)
